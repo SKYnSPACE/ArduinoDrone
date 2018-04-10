@@ -41,6 +41,7 @@ unsigned short keyInput;
 
 struct _Flags Flags;
 struct _Sensor Sensor;
+struct PCONCAT_(,GYRO_MODEL) GYRO_MODEL;
 
 void setup() {
 //![0] put your setup code here, to run once:

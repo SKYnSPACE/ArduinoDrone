@@ -14,8 +14,8 @@ void MessageMenu()
   Serial.println(F("============================================================"));
   Serial.println(F("[안내] m - 점검기능 메뉴 확인"));
   Serial.println(F("[안내] s - 시리얼 통신 확인"));
-  Serial.println(F("[안내] i - I2C 통신 확인"));
-  Serial.println(F("[안내] c - 조종기 Calibration"));
+  Serial.println(F("[안내] i - 센서 I2C 통신 확인 및 보정"));
+  Serial.println(F("[안내] c - 조종기 연결 확인 및 보정"));
   Serial.println(F("[안내] v - 배터리 전압 확인"));
   Serial.println(F("[안내] w - 설정값 저장"));
   Serial.println(F("[안내] q - 종료"));

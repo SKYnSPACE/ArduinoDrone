@@ -1,6 +1,8 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include "DataStructure.h"
+
 extern struct _Sensor Sensor;
 
 void MessageWelcome();

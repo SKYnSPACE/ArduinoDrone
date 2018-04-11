@@ -26,22 +26,15 @@
 #include "DataStructure.h"
 #include "SensorInspection.h"
 
-/*
- * Concatenate preprocessor tokens A and B without expanding macro definitions
- * (however, if invoked from a macro, macro arguments are expanded).
- */
-#define PPCAT_NX(A, B) A ##_## B
-/*
- * Concatenate preprocessor tokens A and B after macro-expanding them.
- * Then, e.g., PCONCAT_(s, 1) produces the identifier s1.
- */
-#define PCONCAT_(A, B) PPCAT_NX(A, B)
+#include "Macros.h"
 
 unsigned short keyInput;
 
 struct _Flags Flags;
 struct _Sensor Sensor;
 struct PCONCAT_(,GYRO_MODEL) GYRO_MODEL;
+
+char str[80];
 
 void setup() {
 //![0] put your setup code here, to run once:
@@ -63,7 +56,7 @@ void setup() {
   #endif
   Wire.begin(); //아두이노를 I2C 마스터로 설정
   TWBR = 12; //twi freq.를 400kHz로 증폭 (기본값 cpu freq. 16000000L, twi freq. 100000L)
-  PCONCAT_(GYRO_MODEL,Init)();
+  FUNCTION_(GYRO_MODEL,Init)();
 
 
 //![4] 수신기 입력핀 설정

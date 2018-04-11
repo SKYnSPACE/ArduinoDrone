@@ -32,6 +32,7 @@ struct _Flags
 
   // Critical situations [0]: Normal, [1]: Abnormal
   bool sensorReadTimeout;
+  bool smallSizedBiasData;
   
   bool exitCommand;
 };

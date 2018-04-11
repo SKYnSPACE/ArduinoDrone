@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 #include "Messages.h"
-#include "DataStructure.h"
 
 void MessageWelcome()
 {

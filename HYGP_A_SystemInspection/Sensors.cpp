@@ -1,30 +1,21 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "DataStructure.h"
 #include "Sensors.h"
-
-/*
- * Concatenate preprocessor tokens A and B without expanding macro definitions
- * (however, if invoked from a macro, macro arguments are expanded).
- */
-#define PPCAT_NX(A, B) A ##_## B
-/*
- * Concatenate preprocessor tokens A and B after macro-expanding them.
- * Then, e.g., PCONCAT_(s, 1) produces the identifier s1.
- */
-#define PCONCAT_(A, B) PPCAT_NX(A, B)
-
-extern struct _Sensor Sensor;
-extern struct _Flags Flags;
-extern struct PCONCAT_(,GYRO_MODEL) GYRO_MODEL;
 
 //! MPU6050 센서관련 설정
 void MPU6050_Init()
 {
   GYRO_MODEL.address = 0x68; // 6050 자이로센서의 통신주소
   GYRO_MODEL.whoAmIREG = 0x75; // 6050 자이로센서의 Who am I register 위치
-  GYRO_MODEL.whoAmIValue = 0x68; // 6050 자이로센서의 Who am I value 
+  GYRO_MODEL.whoAmIValue = 0x68; // 6050 자이로센서의 Who am I value
+
+  GYRO_MODEL.accScale0 = 16384.0f;
+  GYRO_MODEL.accScale1 = 8192.0f;
+  GYRO_MODEL.accScale2 = 4096.0f; //v
+  GYRO_MODEL.gyroScale0 = 131.0f;
+  GYRO_MODEL.gyroScale1 = 65.5f;  //v
+  GYRO_MODEL.gyroScale2 = 32.8f;
   
   //센서 작동시작
   Wire.beginTransmission(GYRO_MODEL.address);
@@ -71,15 +62,17 @@ void MPU6050_ReadData()
 {
   unsigned long timeToWait;
   
+  Flags.sensorReadTimeout=0;
+  
   Wire.beginTransmission(GYRO_MODEL.address);
   Wire.write(0x3B); // 0x3B 부터 읽기 접근
   Wire.endTransmission();
   Wire.requestFrom(GYRO_MODEL.address,14); //14 바이트 추출
 
-  // 최대 100ms 대기
-  timeToWait = millis() + 100;
-  while(Wire.available() < 14 && timeToWait > millis()){} // (100ms > 대기시간) 이면서 데이터가 모자라면 대기
-  if(timeToWait < millis()) // (100ms < 대기시간) 으로 루프가 종료된 경우 비정상판정
+  // 최대 10ms 대기
+  timeToWait = millis() + 10;
+  while(Wire.available() < 14 && timeToWait > millis()){} // (10ms > 대기시간) 이면서 데이터가 모자라면 대기
+  if(timeToWait < millis()) // (10ms < 대기시간) 으로 루프가 종료된 경우 비정상판정
   {
     Flags.sensorReadTimeout=1;
   }
@@ -96,3 +89,55 @@ void MPU6050_ReadData()
   
 }
 
+//TBD!
+void MPU6050_CalibGyro()
+{
+  unsigned long timer;
+  int duration = 10000;
+
+  Flags.smallSizedBiasData = 0;
+
+  GYRO_MODEL.calibDataCount = 0;
+  GYRO_MODEL.pAccum = 0;
+  GYRO_MODEL.qAccum = 0;
+  GYRO_MODEL.rAccum = 0;
+  
+  timer = millis() + duration;
+  while(timer > millis())
+  {
+    FUNCTION_(GYRO_MODEL, ReadData)();
+    GYRO_MODEL.calibDataCount++;
+    GYRO_MODEL.pAccum += ((float)GYRO_MODEL.pInput/GYRO_MODEL.gyroScale1);
+    GYRO_MODEL.qAccum += ((float)GYRO_MODEL.qInput/GYRO_MODEL.gyroScale1);
+    GYRO_MODEL.rAccum += ((float)GYRO_MODEL.rInput/GYRO_MODEL.gyroScale1);
+    if((timer - millis()) < duration)
+    {
+      duration -= 200;
+      Serial.print(F(">"));
+    }
+  }
+  Serial.println(F(""));
+  
+  if (GYRO_MODEL.calibDataCount < 3000)
+  {
+    Flags.smallSizedBiasData = 1;
+  }
+  else
+  {
+    sprintf(str, "pAccum: %d, qAccum: %d, rAccum: %d, dataCount: %d", GYRO_MODEL.pAccum, GYRO_MODEL.qAccum, GYRO_MODEL.rAccum, GYRO_MODEL.calibDataCount);
+    Serial.println(str);    
+    GYRO_MODEL.pBias = GYRO_MODEL.pAccum/GYRO_MODEL.calibDataCount;
+    GYRO_MODEL.qBias = GYRO_MODEL.qAccum/GYRO_MODEL.calibDataCount;
+    GYRO_MODEL.rBias = GYRO_MODEL.rAccum/GYRO_MODEL.calibDataCount;
+  }
+   
+}
+//TBD! Data transfer to Sensor structure (형변환 및 보정치 반영)
+void MPU6050_TransferData()
+{
+  Sensor.Gyro.p = ((float)GYRO_MODEL.pInput / GYRO_MODEL.gyroScale1) - GYRO_MODEL.pBias;
+  Sensor.Gyro.q = ((float)GYRO_MODEL.qInput / GYRO_MODEL.gyroScale1) - GYRO_MODEL.qBias;
+  Sensor.Gyro.q = -Sensor.Gyro.q; // Sensor Y axis reversed.
+  Sensor.Gyro.r = ((float)GYRO_MODEL.rInput / GYRO_MODEL.gyroScale1) - GYRO_MODEL.rBias;
+  Sensor.Gyro.r = -Sensor.Gyro.r; // Sensor Z axis reversed.
+}

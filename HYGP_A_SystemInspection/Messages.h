@@ -18,5 +18,9 @@ void MessageI2C();
 void MessageI2CNormal();
 void MessageI2CAbnormal();
 
+void MessageRTR();
+void MessageRTRNormal();
+void MessageRTRAbnormal();
+
 #endif
 

@@ -21,10 +21,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Wire.h>
+#include <avr/interrupt.h>
 
 #include "Messages.h"
 #include "DataStructure.h"
 #include "SensorInspection.h"
+#include "ReceiverTransmitter.h"
 
 #include "Macros.h"
 
@@ -35,6 +37,7 @@ struct _Sensor Sensor;
 struct PCONCAT_(,GYRO_MODEL) GYRO_MODEL;
 
 char str[80];
+volatile unsigned long timer, timer1, timer2, timer3, timer4; 
 
 void setup() {
 //![0] put your setup code here, to run once:
@@ -60,6 +63,13 @@ void setup() {
 
 
 //![4] 수신기 입력핀 설정
+  cli();
+  PCICR |= (1 << PCIE0);    // B 포트 (PCINT0 - PCINT7, 8-13) 오픈  
+  PCMSK0 |= (1 << PCINT0);  // 인터럽트 설정 (PCINT0, 8)
+  PCMSK0 |= (1 << PCINT1);  // 인터럽트 설정 (PCINT1, 9)
+  PCMSK0 |= (1 << PCINT2);  // 인터럽트 설정 (PCINT2, 10)
+  PCMSK0 |= (1 << PCINT3);  // 인터럽트 설정 (PCINT3, 11)
+  sei();
   
 //![5] 변속기 출력핀 설정
 
@@ -98,8 +108,12 @@ void loop() {
         if(Flags.gyroStatus == 1) MessageI2CNormal();
         else MessageI2CAbnormal();
         break;
-//![1-4] 조종기 Calibration
-      case 'c':
+//![1-4] 송수신 상태 점검 및 조종기 Calibration
+      case 't':
+        MessageRTR();
+        ReceiverInspection();
+        if(Flags.receiverStatus == 1) MessageRTRNormal();
+        else MessageRTRAbnormal();
         break;
 //![1-5] 배터리 전압 확인
       case 'v':
@@ -125,3 +139,83 @@ void loop() {
   }
   
 }
+
+ISR (PCINT0_vect) // Port B, PCINT0 - PCINT7: Handle pin change interrupt from 8 to 13.
+{ 
+//![0]   
+  timer = micros();
+  
+//![1] 8, PB0, 1번 채널과 연결
+  if(PINB & (1<<PB0)) // 8번핀 Rising인 경우 
+  {
+    if(Flags.pin8 == 0) // Low상태를 high로 변경
+    {
+      timer1 = timer;
+      Flags.pin8 = 1;
+    }
+  }
+  else // 8번핀 Falling인 경우
+  { 
+    if(Flags.pin8 == 1) // High상태를 low로 변경하면서 시간 측정 (duty cycle) 
+    {
+      Flags.pin8 = 0;
+      Sensor.Receiver.channel1Input = timer - timer1;
+    }
+  }
+  
+//![2] 9, PB1, 2번 채널과 연결
+  if(PINB & (1<<PB1)) // 9번핀 Rising인 경우 
+  {
+    if(Flags.pin9 == 0) // Low상태를 high로 변경
+    {
+      timer2 = timer;
+      Flags.pin9 = 1;
+    }
+  }
+  else // 9번핀 Falling인 경우
+  { 
+    if(Flags.pin9 == 1) // High상태를 low로 변경하면서 시간 측정 (duty cycle) 
+    {
+      Flags.pin9 = 0;
+      Sensor.Receiver.channel2Input = timer - timer2;
+    }
+  }
+  
+//![3] 10, PB2, 3번 채널과 연결
+  if(PINB & (1<<PB2)) // 10번핀 Rising인 경우 
+  {
+    if(Flags.pin10 == 0) // Low상태를 high로 변경
+    {
+      timer3 = timer;
+      Flags.pin10 = 1;
+    }
+  }
+  else // 10번핀 Falling인 경우
+  { 
+    if(Flags.pin10 == 1) // High상태를 low로 변경하면서 시간 측정 (duty cycle) 
+    {
+      Flags.pin10 = 0;
+      Sensor.Receiver.channel3Input = timer - timer3;
+    }
+  }
+
+//![4] 11, PB3, 11번 채널과 연결
+  if(PINB & (1<<PB3)) // 11번핀 Rising인 경우 
+  {
+    if(Flags.pin11 == 0) // Low상태를 high로 변경
+    {
+      timer4 = timer;
+      Flags.pin11 = 1;
+    }
+  }
+  else // 11번핀 Falling인 경우
+  { 
+    if(Flags.pin11 == 1) // High상태를 low로 변경하면서 시간 측정 (duty cycle) 
+    {
+      Flags.pin11 = 0;
+      Sensor.Receiver.channel4Input = timer - timer4;
+    }
+  }
+}
+ISR(PCINT1_vect){}    // Port C, PCINT8 - PCINT14
+ISR(PCINT2_vect){}    // Port D, PCINT16 - PCINT23

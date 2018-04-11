@@ -14,7 +14,7 @@ void MessageMenu()
   Serial.println(F("[안내] m - 점검기능 메뉴 확인"));
   Serial.println(F("[안내] s - 시리얼 통신 확인"));
   Serial.println(F("[안내] i - 센서 I2C 통신 확인 및 보정"));
-  Serial.println(F("[안내] c - 조종기 연결 확인 및 보정"));
+  Serial.println(F("[안내] t - 조종기 연결 확인 및 보정"));
   Serial.println(F("[안내] v - 배터리 전압 확인"));
   Serial.println(F("[안내] w - 설정값 저장"));
   Serial.println(F("[안내] q - 종료"));
@@ -53,6 +53,24 @@ void MessageI2CAbnormal()
   Serial.println(F("[오류] I2C 통신 점검 필요."));
   Serial.println(F("============================================================"));
 }
+
+
+void MessageRTR()
+{
+  Serial.println(F("============================================================"));
+  Serial.println(F("[안내] 송수신기 기능을 점검합니다"));  
+}
+void MessageRTRNormal()
+{
+  Serial.println(F("[정상] 송수신기 기능 확인 완료."));
+  Serial.println(F("============================================================"));
+}
+void MessageRTRAbnormal()
+{
+  Serial.println(F("[오류] 송수신기 기능 점검 필요."));
+  Serial.println(F("============================================================"));
+}
+
 
 void MessageWrongInput()
 {

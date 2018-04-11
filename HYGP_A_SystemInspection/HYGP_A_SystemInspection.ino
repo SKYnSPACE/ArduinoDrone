@@ -112,16 +112,23 @@ void loop() {
       case 't':
         MessageRTR();
         ReceiverInspection();
-        if(Flags.receiverStatus == 1) MessageRTRNormal();
+        if(Flags.receiverStatus == 1)
+        {
+          TransmitterStickRange();
+          MessageRTRNormal();
+        }
         else MessageRTRAbnormal();
         break;
 //![1-5] 배터리 전압 확인
       case 'v':
         break;
-//![1-6] 설정값 저장
+//![1-6] 리포트 출력
+      case 'r':
+        break;
+//![1-7] 설정값 저장
       case 'w':
         break;
-//![1-7] 종료
+//![1-8] 종료
       case 'q':
         MessageExit();
         Flags.exitCommand = 1;

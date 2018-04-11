@@ -140,4 +140,10 @@ void MPU6050_TransferData()
   Sensor.Gyro.q = -Sensor.Gyro.q; // Sensor Y axis reversed.
   Sensor.Gyro.r = ((float)GYRO_MODEL.rInput / GYRO_MODEL.gyroScale1) - GYRO_MODEL.rBias;
   Sensor.Gyro.r = -Sensor.Gyro.r; // Sensor Z axis reversed.
+
+  Sensor.Acc.x = ((float)GYRO_MODEL.accXInput) / GYRO_MODEL.accScale2 * 9.81;
+  Sensor.Acc.y = ((float)GYRO_MODEL.accYInput) / GYRO_MODEL.accScale2 * 9.81;
+  Sensor.Acc.y = -Sensor.Acc.y; // Sensor Y axis reversed.
+  Sensor.Acc.z = ((float)GYRO_MODEL.accZInput) / GYRO_MODEL.accScale2 * 9.81;
+  Sensor.Acc.z = -Sensor.Acc.z; // Sensor Z axis reversed.
 }

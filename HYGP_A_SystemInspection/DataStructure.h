@@ -14,7 +14,10 @@ struct _Gyro
 struct _Receiver
 {
   int channel1Input, channel2Input, channel3Input, channel4Input;
-
+  int channel1Center, channel2Center, channel3Center, channel4Center;
+  int channel1Min, channel2Min, channel3Min, channel4Min;
+  int channel1Max, channel2Max, channel3Max, channel4Max;
+  
   float channel1, channel2, channel3, channel4; // Normalized value (-1~1)
 };
 

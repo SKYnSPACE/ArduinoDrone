@@ -16,6 +16,7 @@ void MessageMenu()
   Serial.println(F("[안내] i - 센서 I2C 통신 확인 및 보정"));
   Serial.println(F("[안내] t - 조종기 연결 확인 및 보정"));
   Serial.println(F("[안내] v - 배터리 전압 확인"));
+  Serial.println(F("[안내] r - 리포트 출력"));
   Serial.println(F("[안내] w - 설정값 저장"));
   Serial.println(F("[안내] q - 종료"));
   Serial.println(F("============================================================"));

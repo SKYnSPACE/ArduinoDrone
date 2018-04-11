@@ -65,10 +65,22 @@ bool GyroInspection()
         FUNCTION_(GYRO_MODEL, TransferData)();
         Serial.print(F(">>>>>>[안내] p = "));
         Serial.print(Sensor.Gyro.p);
-        Serial.print(F(", q = "));
+        Serial.print("\t");
+        Serial.print(F("q = "));
         Serial.print(Sensor.Gyro.q);
-        Serial.print(F(", r = "));
-        Serial.println(Sensor.Gyro.r);
+        Serial.print("\t");
+        Serial.print(F("r = "));
+        Serial.print(Sensor.Gyro.r);
+        Serial.print("\t");
+        Serial.print(F("ax = "));
+        Serial.print(Sensor.Acc.x);
+        Serial.print("\t");
+        Serial.print(F("ay = "));
+        Serial.print(Sensor.Acc.y);
+        Serial.print("\t");
+        Serial.print(F("az = "));
+        Serial.println(Sensor.Acc.z);
+        delay(20);
       }
       if(Flags.sensorReadTimeout == 0) //보정중 타임아웃 에러, 가 발생하였는지 점검
       {

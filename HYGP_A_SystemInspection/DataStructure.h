@@ -87,6 +87,8 @@ struct _Flags
   bool gyroStatus;
   bool receiverStatus;
   bool transmitterStatus;
+  bool termsAndConditionsPWM;
+  bool motorStatus;
 
   // Critical situations [0]: Normal, [1]: Abnormal
   bool sensorReadTimeout;

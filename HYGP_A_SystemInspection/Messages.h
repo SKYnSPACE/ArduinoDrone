@@ -22,5 +22,8 @@ void MessageRTR();
 void MessageRTRNormal();
 void MessageRTRAbnormal();
 
+void MessagePWMOutput();
+void MessagePWMOutputNormal();
+
 #endif
 

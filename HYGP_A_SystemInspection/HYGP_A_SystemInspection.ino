@@ -27,6 +27,7 @@
 #include "DataStructure.h"
 #include "SensorInspection.h"
 #include "ReceiverTransmitter.h"
+#include "PWMOut.h"
 
 #include "Macros.h"
 
@@ -34,10 +35,14 @@ unsigned short keyInput;
 
 struct _Flags Flags;
 struct _Sensor Sensor;
+struct _Motor Motor;
 struct PCONCAT_(,GYRO_MODEL) GYRO_MODEL;
 
 char str[80];
-volatile unsigned long timer, timer1, timer2, timer3, timer4; 
+volatile unsigned long systemTimer; // 시스템 동작 측정용 시계
+volatile unsigned long timer; // 범용 시계
+volatile unsigned long timer1, timer2, timer3, timer4; // For PWM input
+volatile unsigned long motorTimer1, motorTimer2, motorTimer3, motorTimer4; // For PWM output
 
 void setup() {
 //![0] put your setup code here, to run once:
@@ -72,7 +77,12 @@ void setup() {
   sei();
   
 //![5] 변속기 출력핀 설정
-
+  //DDRD |= B00111100; (0b00000000은 gcc에서만..ㅠㅠ)
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  
 //![6] 각종 변수 초기화
   Flags.exitCommand = 0;
 
@@ -121,14 +131,24 @@ void loop() {
         break;
 //![1-5] 배터리 전압 확인
       case 'v':
+        Serial.print(F("[안내] 배터리 전압은 "));
+        Serial.print((((float)analogRead(0))*5/1024*3) + 0.8313);
+        Serial.print(F("V 입니다."));
         break;
-//![1-6] 리포트 출력
+//![1-6] PWM 출력 확인
+      case 'p':
+        MessagePWMOutput();
+        PWMOutInspection();
+        break;
+//![1-7] 리포트 출력
       case 'r':
+        Serial.print(F("[안내] 현재 제공하지 않는 기능입니다."));
         break;
-//![1-7] 설정값 저장
+//![1-8] 설정값 저장
       case 'w':
+        Serial.print(F("[안내] 현재 제공하지 않는 기능입니다."));
         break;
-//![1-8] 종료
+//![1-9] 종료
       case 'q':
         MessageExit();
         Flags.exitCommand = 1;

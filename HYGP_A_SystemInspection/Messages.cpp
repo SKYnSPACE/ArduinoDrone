@@ -16,6 +16,7 @@ void MessageMenu()
   Serial.println(F("[안내] i - 센서 I2C 통신 확인 및 보정"));
   Serial.println(F("[안내] t - 조종기 연결 확인 및 보정"));
   Serial.println(F("[안내] v - 배터리 전압 확인"));
+  Serial.println(F("[안내] p - 주의! 프로펠러 제거후 사용! PWM 신호송출 확인"));
   Serial.println(F("[안내] r - 리포트 출력"));
   Serial.println(F("[안내] w - 설정값 저장"));
   Serial.println(F("[안내] q - 종료"));
@@ -72,6 +73,23 @@ void MessageRTRAbnormal()
   Serial.println(F("============================================================"));
 }
 
+void MessagePWMOutput()
+{
+  Serial.println(F("============================================================"));
+  Serial.println(F("[안내] PWM 출력 기능을 점검합니다. 모터 번호와 회전방향을 확인하십시오."));
+  Serial.println(F("[경고] 사용자께서는 프로펠러가 완전히 제거되었음을 확인하였습니까? [y/n]"));
+  Serial.println(F("[경고] 사용자께서는 모터 오동작으로 인해 발생하는 문제에 책임이 있음을 인지하고 계십니까? [y/n]"));
+}
+void MessagePWMNormal()
+{
+  Serial.println(F("[정상] PWM 출력 기능 확인 완료."));
+  Serial.println(F("============================================================"));
+}
+void MessagePWMAbnormal()
+{
+  Serial.println(F("[오류] PWM 출력 기능 점검 필요."));
+  Serial.println(F("============================================================"));
+}
 
 void MessageWrongInput()
 {

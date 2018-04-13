@@ -276,7 +276,7 @@ void loop()
   
   if((Flags.flightMode == 0) &&
      (Sensor.Receiver.channel3 == 1080) && 
-     (Sensor.Receiver.channel2 == 1080) &&
+     (Sensor.Receiver.channel2 == 1920) &&
      ((Sensor.Receiver.channel1 == 1080)||(Sensor.Receiver.channel1 == 1920)))
   {
     Motor.outputPWM1 = 1150;
@@ -288,7 +288,7 @@ void loop()
 
   if((Flags.flightMode == 1) && (stanbyTimer + 1000 < millis()) &&
      (Sensor.Receiver.channel3 == 1080) && 
-     (Sensor.Receiver.channel2 == 1080) &&
+     (Sensor.Receiver.channel2 == 1920) &&
      ((Sensor.Receiver.channel1 == 1080)||(Sensor.Receiver.channel1 == 1920)))
   {
     Motor.outputPWM1 = PWM_LOW;
@@ -334,10 +334,10 @@ void loop()
   if(Flags.flightMode == 3)
   {
     PIDController();
-    Motor.outputPWM1 = Controller.zDotCommand + Controller.pCommand + Controller.qCommand;
-    Motor.outputPWM2 = Controller.zDotCommand - Controller.pCommand + Controller.qCommand;
-    Motor.outputPWM3 = Controller.zDotCommand - Controller.pCommand - Controller.qCommand;
-    Motor.outputPWM4 = Controller.zDotCommand + Controller.pCommand - Controller.qCommand;
+    Motor.outputPWM1 = Controller.zDotCommand + Controller.pCommand - Controller.qCommand - Controller.rCommand;
+    Motor.outputPWM2 = Controller.zDotCommand - Controller.pCommand - Controller.qCommand + Controller.rCommand;
+    Motor.outputPWM3 = Controller.zDotCommand - Controller.pCommand + Controller.qCommand - Controller.rCommand;
+    Motor.outputPWM4 = Controller.zDotCommand + Controller.pCommand + Controller.qCommand + Controller.rCommand;
   }
   
   if((Flags.flightMode == 3) && (Sensor.Receiver.channel3 <= 1088))

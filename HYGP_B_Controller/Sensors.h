@@ -18,6 +18,7 @@ unsigned char MPU6050_IDCheck();
 void MPU6050_ReadData();
 void MPU6050_CalibGyro();
 void MPU6050_TransferData();
+void MPU6050_LPF();
 
 struct _MPU6050
 {

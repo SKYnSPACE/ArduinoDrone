@@ -4,7 +4,7 @@
 
 void PWMOutRaiser()
 {
-  while(micros() - systemTimer < 2500){} // 모터 출력 속도인 2.5ms(400Hz) 내에 모든 계산이 완료된 경우 대기.
+  while(micros() - systemTimer < systemPeriod){} // 모터 출력 속도인 (2.5ms, 2500us, 400Hz) 내에 모든 계산이 완료된 경우 대기.
   systemTimer = micros(); //다음 루프를 위한 시스템 시계 업데이트
 
   PORTD |= B01111000; //모든 출력 high.

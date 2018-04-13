@@ -3,12 +3,20 @@
 
 struct _Acc
 {
-  float x, y, z;
+  float x, y, z, total;
 };
 
 struct _Gyro
 {
   float p, q, r;
+  float pFiltered, qFiltered, rFiltered;
+};
+
+struct _Estimates
+{
+  float rollFromGyro, pitchFromGyro, yawFromGyro;
+  float rollFromAcc, pitchFromAcc, yawFromAcc;
+  float roll, pitch, yaw;
 };
 
 struct _Receiver
@@ -18,7 +26,9 @@ struct _Receiver
   int channel1Min, channel2Min, channel3Min, channel4Min;
   int channel1Max, channel2Max, channel3Max, channel4Max;
   
-  float channel1, channel2, channel3, channel4; // Normalized value (-1~1)
+  int channel1, channel2, channel3, channel4; // Normalized value (1080~1500~1920)
+
+  int deadBand;
 };
 
 struct _Battery
@@ -33,6 +43,7 @@ struct _Sensor
 
   _Acc Acc;
   _Gyro Gyro;
+  _Estimates Estimates;
   _Receiver Receiver;
   _Battery Battery;
   
@@ -62,6 +73,11 @@ struct _Controller
   float pAccumulatedError;
   float qAccumulatedError;
   float rAccumulatedError;
+
+  float zDotCommand;
+  float pCommand;
+  float qCommand;
+  float rCommand;
 };
 
 struct _Motor
@@ -75,6 +91,8 @@ struct _Motor
 struct _Flags
 {
   bool mainFrequencyCheck;
+
+  int flightMode; //[-1]: Grounded-listening, [0]: WOW, [1]: engine-up-holding, [2]: ready-to-fly , [3]: flying
   
   //PIN Digital value?
   bool pin8;

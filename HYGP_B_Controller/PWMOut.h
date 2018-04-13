@@ -10,6 +10,9 @@ extern struct _Flags Flags;
 
 extern unsigned short keyInput;
 
+extern const float systemFreq;  // 시스템 동작 주파수 [Hz]
+extern const int systemPeriod; // 시스템 동작 주기 (1/systemFreq) [us, microseconds]
+
 extern volatile unsigned long systemTimer;
 extern volatile unsigned long timer;
 extern volatile unsigned long motorTimer0;

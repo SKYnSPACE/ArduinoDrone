@@ -34,6 +34,8 @@
 #include "SensorInspection.h"
 #include "ReceiverTransmitter.h"
 #include "PWMOut.h"
+#include "Filters.h"
+#include "Controller.h"
 
 #include "Macros.h"
 
@@ -43,17 +45,27 @@ struct _Flags Flags;
 struct _Sensor Sensor;
 struct _Motor Motor;
 struct PCONCAT_(, GYRO_MODEL) GYRO_MODEL;
+struct _Controller Controller;
+
+const float systemFreq = 200;  // 시스템 동작 주파수 [Hz], const -> 초기화이후 변경 못하게
+const int systemPeriod = 5000; // 시스템 동작 주기 (1/systemFreq) [us, microseconds]
 
 char str[80];
-volatile unsigned long systemTimer; // 시스템 동작 측정용 시계
+volatile unsigned long systemTimer; // 시스템 동작 측정용 시계 PWMOutRaiser 에서 업데이트됨. 다른곳에서 사용금지! PWM 출력 시간 꼬이면 큰일남. volatile -> 최적화금지
+volatile unsigned long setupTimer; // 시스템 동작 점검시 사용하는 타이머
+volatile unsigned long stanbyTimer;
 volatile unsigned long receiverTimer0; // PWM input 시간체크시 사용되는 reference timer
 volatile unsigned long receiverTimer1, receiverTimer2, receiverTimer3, receiverTimer4; // 각 채널별 PWM input 시간 체크용
 volatile unsigned long motorTimer0; // PWM output 신호 생성시 사용되는 reference timer
 volatile unsigned long motorTimer1, motorTimer2, motorTimer3, motorTimer4; // 각 모터별 PWM output 시간 체크용
 
+void ReadADC0();
 
 void setup() {
   //![0] put your setup code here, to run once:
+  pinMode(2, OUTPUT); //LED RED
+  pinMode(12, OUTPUT); //LED YELLOW
+  pinMode(13, OUTPUT); //LED GREEN
 
   //![1] EEPROM 초기화
 // TBD
@@ -92,14 +104,15 @@ void setup() {
 
 
   //![6] 각종 변수 초기화
-  //Flags.exitCommand = 0;
+    Flags.flightMode = 0;
+  
     Sensor.Battery.scaler = 0.014648; // [5V / 1024setps * 3], 3 = (R1+R2)/(R1)
     Sensor.Battery.batteryVoltage = 11.0f; //빠른 필터 수렴을 위해
     
-    //Motor.outputPWM1 = PWM_LOW;
-    //Motor.outputPWM2 = PWM_LOW;
-    //Motor.outputPWM3 = PWM_LOW;
-    //Motor.outputPWM4 = PWM_LOW;
+    Motor.outputPWM1 = PWM_LOW;
+    Motor.outputPWM2 = PWM_LOW;
+    Motor.outputPWM3 = PWM_LOW;
+    Motor.outputPWM4 = PWM_LOW;
     
     Sensor.Receiver.channel1Center = 1520;
     Sensor.Receiver.channel2Center = 1520;
@@ -114,10 +127,23 @@ void setup() {
     Sensor.Receiver.channel3Max = 1940;
     Sensor.Receiver.channel4Max = 1940;
 
+    Sensor.Receiver.deadBand = 8;
+
+    Controller.pRateGain[0] = 1; //P
+    Controller.pRateGain[1] = 0; //I
+    Controller.pRateGain[2] = 0; //D
+    Controller.qRateGain[0] = 1;
+    Controller.qRateGain[1] = 0;
+    Controller.qRateGain[2] = 0;
+    Controller.rRateGain[0] = 1;
+    Controller.rRateGain[1] = 0;
+    Controller.rRateGain[2] = 0;
+//
   //![7] 메인 실행전 안전점검사항 (저전압체크, 송수신기 연결, 스로틀 스틱) 불량시 무한루프
   
   while((Sensor.Battery.batteryVoltage<11.1) || 
-        (Sensor.Receiver.channel1Input == 0) ||
+        (Sensor.Receiver.channel1Input <= 0) ||
+        (Sensor.Receiver.channel1Input > 2000) ||
         (Sensor.Receiver.channel3Input > Sensor.Receiver.channel3Min))
   {
     ReadADC0(); // 필터 수렴하여 실제 전압 도달까지 루프내에서 반복
@@ -126,161 +152,218 @@ Serial.print(F(" "));
 Serial.print(Sensor.Receiver.channel1Input);
 Serial.print(F(" "));
 Serial.println(Sensor.Receiver.channel3Input);
-//TBD: 적색 LED 점등하여 불량상황을 알림. digitalWrite(#,HIGH);
+    delay(100);
+    digitalWrite(2,HIGH);
+//TBD: 적색 LED 점등하여 불량상황을 알림. digitalWrite(2,HIGH);
   }
 //TBD: 적색 LED 소등. digitalWrite(#,LOW);
-//TBD: 황색 LED 점등하여 자이로 보정 예정임을 알림.
+    digitalWrite(2,LOW);
 
+
+  
   //![8] 자이로 설정 및 보정
+  digitalWrite(12,HIGH);
   FUNCTION_(GYRO_MODEL, Init)();
   delay(5000);
   FUNCTION_(GYRO_MODEL, CalibGyro)();
 //TBD: Calib에서 오류 발생시 적색 LED 다시 점등
 //TBD: 정상인 경우에는 황색 LED 소등.
+  digitalWrite(12,LOW);
+
 
   //![9] 1,2,3,4번 모터 순으로 프로펠러 일시 가동.
-  systemTimer = millis() + 3000;
-  while(systemTimer > millis())
+  digitalWrite(12,HIGH);
+  setupTimer = millis() + 3000;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
   
-  Motor.outputPWM1 = 1200;
-  systemTimer = millis() + 500;
-  while(systemTimer > millis())
+  Motor.outputPWM1 = 1150;
+  setupTimer = millis() + 500;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
   Motor.outputPWM1 = PWM_LOW;
-  Motor.outputPWM2 = 1200;
-  systemTimer = millis() + 500;
-  while(systemTimer > millis())
+  Motor.outputPWM2 = 1150;
+  setupTimer = millis() + 500;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
   Motor.outputPWM2 = PWM_LOW;
-  Motor.outputPWM3 = 1200;
-  systemTimer = millis() + 500;
-  while(systemTimer > millis())
+  Motor.outputPWM3 = 1150;
+  setupTimer = millis() + 500;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
   Motor.outputPWM3 = PWM_LOW;
-  Motor.outputPWM4 = 1200;
-  systemTimer = millis() + 500;
-  while(systemTimer > millis())
+  Motor.outputPWM4 = 1150;
+  setupTimer = millis() + 500;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
   Motor.outputPWM4 = PWM_LOW;
-  while(systemTimer > millis())
+  setupTimer = millis() + 3000;
+  while(setupTimer > millis())
   {
     PWMOutRaiser();
     PWMOutFaller();
   }
+  digitalWrite(12,LOW);
 
 //TBD: LED는 녹색으로 변경 -> 메인 동작중 황색 (11.4v) -> 적색(10.8v) voltage indicator로 활용 
-  
+  digitalWrite(13,HIGH);
   //![#] 설정 완료후 환영 메시지 송출.. -> 메시지는 모두 LED 또는 부저로 대체
   //MessageWelcome();
   //delay(1000);
   //MessageMenu();
+  
+//UNCOMMENT TO TEST SETUP ONLY
+  //while(1);
 
-  //IN ORDER TO TEST SETUP ONLY
-  while(1);
-}
-
-void loop() {
-  //![0] put your main code here, to run repeatedly:
+  //![#] 
   
 
-  //![1] 점검기능 시작
-  if ((Serial.available() > 0) && (Flags.exitCommand == 0))
+
+  FUNCTION_(GYRO_MODEL, ReadData)();
+  FUNCTION_(GYRO_MODEL, TransferData)();
+  FUNCTION_(GYRO_MODEL, LPF)();
+  EulerEstimator();
+  Sensor.Estimates.roll = Sensor.Estimates.rollFromAcc; // 초기값은 무조건 가속도 센서로부터 얻는게 정확함
+  Sensor.Estimates.pitch = Sensor.Estimates.pitchFromAcc; // 초기값은 무조건 가속도 센서로부터 얻는게 정확함
+    
+}
+
+void loop() 
+{
+//  Serial.print(F(">>>>>>[안내] gR = "));
+//  Serial.print(Sensor.Estimates.rollFromGyro);
+//  Serial.print("\t");
+  Serial.print(F("gP = "));
+  Serial.println(Sensor.Estimates.pitchFromGyro);
+//  Serial.print("\t");
+//  Serial.print(F("aR = "));
+//  Serial.print(Sensor.Estimates.rollFromAcc);
+//  Serial.print("\t");
+//  Serial.print(F("aP = "));
+//  Serial.print(Sensor.Estimates.pitchFromAcc);
+//  Serial.print("\t");
+//  Serial.print(F("R = "));
+//  Serial.print(Sensor.Estimates.roll);
+//  Serial.print(F("P = "));
+//  Serial.println(Sensor.Estimates.pitch);
+
+  FUNCTION_(GYRO_MODEL, ReadData)();
+  FUNCTION_(GYRO_MODEL, TransferData)();
+  FUNCTION_(GYRO_MODEL, LPF)();
+  EulerEstimator();
+  StickNormalize();
+
+// TBD: Switch-Case 로 대체
+  if(Flags.flightMode < 0)
   {
-    keyInput = Serial.read();
-    switch (keyInput)
-    {
-      //![1-1] 메뉴 송출
-      case 'm':
-        MessageMenu();
-        break;
-      //![1-2] 시리얼통신 점검
-      case 's':
-        MessageSerial();
-        MessageSerialNormal();
-        break;
-      //![1-3] 센서상태 점검 (자이로만 있음)
-      case 'i':
-        MessageI2C();
-        GyroInspection();
-        if (Flags.gyroStatus == 1) MessageI2CNormal();
-        else MessageI2CAbnormal();
-        break;
-      //![1-4] 송수신 상태 점검 및 조종기 Calibration
-      case 't':
-        MessageRTR();
-        ReceiverInspection();
-        if (Flags.receiverStatus == 1)
-        {
-          TransmitterStickRange();
-          MessageRTRNormal();
-        }
-        else MessageRTRAbnormal();
-        break;
-      //![1-5] 배터리 전압 확인
-      case 'v':
-        Serial.print(F("[안내] 배터리 전압은 "));
-        Serial.print((((float)analogRead(0)) * 5 / 1024 * 3) + 0.8313);
-        Serial.println(F("V 입니다."));
-        break;
-      //![1-6] PWM 출력 확인
-      case 'p':
-        MessagePWMOutput();
-        PWMOutInspection();
-        if (Flags.motorStatus == 1) MessagePWMOutputNormal();
-        else MessagePWMOutputAbnormal();
-        break;
-      //![1-7] 리포트 출력
-      case 'r':
-        Serial.println(F("[안내] 현재 제공하지 않는 기능입니다."));
-        break;
-      //![1-8] 설정값 저장
-      case 'w':
-        Serial.println(F("[안내] 현재 제공하지 않는 기능입니다."));
-        break;
-      //![1-9] 종료
-      case 'q':
-        MessageExit();
-        Flags.exitCommand = 1;
-        while (1) {}
-        break;
-      //![-] 예외처리
-      default:
-        MessageWrongInput();
-        break;
-    }
+    Flags.flightMode++;
   }
-  else
+  
+  if((Flags.flightMode == 0) &&
+     (Sensor.Receiver.channel3 == 1080) && 
+     (Sensor.Receiver.channel2 == 1080) &&
+     ((Sensor.Receiver.channel1 == 1080)||(Sensor.Receiver.channel1 == 1920)))
   {
-    while (!Serial.available()) // 시리얼 명령 없을시 루프
-    {
-      if (Flags.motorStatus == 1) //모터 테스트 정상 완료했다면 모터로 PWM_LOW 계속 출력
-      {
-        PWMOutRaiser();
-        Motor.outputPWM1 = PWM_LOW;
-        Motor.outputPWM2 = PWM_LOW;
-        Motor.outputPWM3 = PWM_LOW;
-        Motor.outputPWM4 = PWM_LOW;
-        PWMOutFaller();
-      }
-    }
+    Motor.outputPWM1 = 1150;
+    Motor.outputPWM2 = 1150;
+    Motor.outputPWM3 = 1150;
+    Motor.outputPWM4 = 1150;
+    Flags.flightMode = 2;
   }
 
+  if((Flags.flightMode == 1) && (stanbyTimer + 1000 < millis()) &&
+     (Sensor.Receiver.channel3 == 1080) && 
+     (Sensor.Receiver.channel2 == 1080) &&
+     ((Sensor.Receiver.channel1 == 1080)||(Sensor.Receiver.channel1 == 1920)))
+  {
+    Motor.outputPWM1 = PWM_LOW;
+    Motor.outputPWM2 = PWM_LOW;
+    Motor.outputPWM3 = PWM_LOW;
+    Motor.outputPWM4 = PWM_LOW;
+    Flags.flightMode = -systemFreq*2;
+  }
+
+  if((Flags.flightMode == 1) && (stanbyTimer + 3000 < millis()))
+  {
+    Motor.outputPWM1 = PWM_LOW;
+    Motor.outputPWM2 = PWM_LOW;
+    Motor.outputPWM3 = PWM_LOW;
+    Motor.outputPWM4 = PWM_LOW;
+    Flags.flightMode = 0;
+  }
+  
+  if((Flags.flightMode == 2) && (Sensor.Receiver.channel3 <= 1088))
+  {
+    Motor.outputPWM1 = 1150;
+    Motor.outputPWM2 = 1150;
+    Motor.outputPWM3 = 1150;
+    Motor.outputPWM4 = 1150;
+    
+    Controller.pAccumulatedError = 0;
+    Controller.qAccumulatedError = 0;
+    Controller.rAccumulatedError = 0;
+    Controller.pPreviousError = 0;
+    Controller.qPreviousError = 0;
+    Controller.rPreviousError = 0;
+
+    stanbyTimer = millis();
+    Flags.flightMode = 1;
+  }
+
+  if(((Flags.flightMode == 1) || (Flags.flightMode == 2)) && 
+     (Sensor.Receiver.channel3 > 1088))
+  {
+    Flags.flightMode = 3;
+  }
+
+  if(Flags.flightMode == 3)
+  {
+    PIDController();
+    Motor.outputPWM1 = Controller.zDotCommand + Controller.pCommand + Controller.qCommand;
+    Motor.outputPWM2 = Controller.zDotCommand - Controller.pCommand + Controller.qCommand;
+    Motor.outputPWM3 = Controller.zDotCommand - Controller.pCommand - Controller.qCommand;
+    Motor.outputPWM4 = Controller.zDotCommand + Controller.pCommand - Controller.qCommand;
+  }
+  
+  if((Flags.flightMode == 3) && (Sensor.Receiver.channel3 <= 1088))
+  {
+    Flags.flightMode = 2;
+  }
+
+  if((micros() - systemTimer > systemPeriod))
+  {
+    digitalWrite(13,LOW);
+    digitalWrite(12,LOW);
+    digitalWrite(2,HIGH);
+  }
+
+  
+  //모터 출력
+  PWMOutRaiser(); //여기서 남는시간은 태우고 systemTimer 초기화됨! 
+  
+  // Raiser 와 Faller 사이에 1ms 여유있음. 
+  // 뭔가 넣어도 되지만 1ms 넘으면 샵됨.. high 상태가 정상보다 길게 유지될 수 있음
+  // 제어 흐름에 영향을 크게 주지 않으면서 시시한 계산을 넣기 좋음.
+  ReadADC0();
+
+  PWMOutFaller();
+
+  // 여기부터는 400Hz인 경우 약0.5ms, 200Hz인 경우 약2ms 여유 있음
 }
 
 // 인터럽트 코드에는 최소한의 계산만!

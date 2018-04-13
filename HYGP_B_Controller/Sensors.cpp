@@ -146,4 +146,16 @@ void MPU6050_TransferData()
   Sensor.Acc.y = -Sensor.Acc.y; // Sensor Y axis reversed.
   Sensor.Acc.z = ((float)GYRO_MODEL.accZInput) / GYRO_MODEL.accScale2 * 9.81;
   Sensor.Acc.z = -Sensor.Acc.z; // Sensor Z axis reversed.
+
+  Sensor.Acc.total = sqrt((Sensor.Acc.x*Sensor.Acc.x)+
+                          (Sensor.Acc.y*Sensor.Acc.y)+
+                          (Sensor.Acc.z*Sensor.Acc.z));
 }
+
+void MPU6050_LPF()
+{
+  Sensor.Gyro.pFiltered = 0.7* Sensor.Gyro.pFiltered + 0.3 * Sensor.Gyro.p;
+  Sensor.Gyro.qFiltered = 0.7* Sensor.Gyro.qFiltered + 0.3 * Sensor.Gyro.q;
+  Sensor.Gyro.rFiltered = 0.7* Sensor.Gyro.rFiltered + 0.3 * Sensor.Gyro.r;
+}
+

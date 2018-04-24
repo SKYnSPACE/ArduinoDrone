@@ -29,10 +29,12 @@ void PIDController()
   Controller.qReference /= 4; // 작은값으로 나눌수록 aggressive
   Controller.rReference /= 4;
 
+  /*Pilot assistance using Euler Angle
   Controller.pReference -= Sensor.Estimates.roll; // Pilot assistance
   Controller.qReference -= Sensor.Estimates.pitch;// 자세가 기울어졌다고 판단되면 1초당 해당각도만큼 보정타
   // 영향이 어느정도 있는지는 분석 필요함.
   // 측정 자세각을 I 쪽에 엮는 것도 재미있을듯.
+  */
 
   Controller.pError = (Sensor.Gyro.pFiltered - Controller.pReference);
   Controller.qError = (Sensor.Gyro.qFiltered - Controller.qReference);

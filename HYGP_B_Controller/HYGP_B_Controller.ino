@@ -72,7 +72,7 @@ void setup() {
 
 
   //![2] 시리얼 통신 준비 @Baudrate 57600
-  Serial.begin(57600);
+  //Serial.begin(57600);
 // 개발중 디버깅용으로 사용. 비행코드 업로드시 주석처리
 
   //![3] I2C통신 준비
@@ -129,15 +129,15 @@ void setup() {
 
     Sensor.Receiver.deadBand = 8;
 
-    Controller.pRateGain[0] = 1; //P
-    Controller.pRateGain[1] = 0; //I
-    Controller.pRateGain[2] = 0; //D
-    Controller.qRateGain[0] = 1;
-    Controller.qRateGain[1] = 0;
-    Controller.qRateGain[2] = 0;
-    Controller.rRateGain[0] = 1;
-    Controller.rRateGain[1] = 0;
-    Controller.rRateGain[2] = 0;
+    Controller.pRateGain[0] = 1.1; //P Roll
+    Controller.pRateGain[1] = 0.02; //I
+    Controller.pRateGain[2] = 1; //D
+    Controller.qRateGain[0] = 1.1; //P Pitch
+    Controller.qRateGain[1] = 0.02; //I
+    Controller.qRateGain[2] = 1; //D
+    Controller.rRateGain[0] = 4.5; //P Yaw
+    Controller.rRateGain[1] = 0.05; //I
+    Controller.rRateGain[2] = 0; //D
 //
   //![7] 메인 실행전 안전점검사항 (저전압체크, 송수신기 연결, 스로틀 스틱) 불량시 무한루프
   
@@ -147,11 +147,13 @@ void setup() {
         (Sensor.Receiver.channel3Input > Sensor.Receiver.channel3Min))
   {
     ReadADC0(); // 필터 수렴하여 실제 전압 도달까지 루프내에서 반복
+    /*
 Serial.print(Sensor.Battery.batteryVoltage);
 Serial.print(F(" "));
 Serial.print(Sensor.Receiver.channel1Input);
 Serial.print(F(" "));
 Serial.println(Sensor.Receiver.channel3Input);
+*/
     delay(100);
     digitalWrite(2,HIGH);
 //TBD: 적색 LED 점등하여 불량상황을 알림. digitalWrite(2,HIGH);
@@ -248,8 +250,10 @@ void loop()
 //  Serial.print(F(">>>>>>[안내] gR = "));
 //  Serial.print(Sensor.Estimates.rollFromGyro);
 //  Serial.print("\t");
+/*
   Serial.print(F("gP = "));
   Serial.println(Sensor.Estimates.pitchFromGyro);
+  */
 //  Serial.print("\t");
 //  Serial.print(F("aR = "));
 //  Serial.print(Sensor.Estimates.rollFromAcc);
@@ -338,6 +342,17 @@ void loop()
     Motor.outputPWM2 = Controller.zDotCommand - Controller.pCommand - Controller.qCommand + Controller.rCommand;
     Motor.outputPWM3 = Controller.zDotCommand - Controller.pCommand + Controller.qCommand - Controller.rCommand;
     Motor.outputPWM4 = Controller.zDotCommand + Controller.pCommand + Controller.qCommand + Controller.rCommand;
+
+    /* [OPTIONAL] BATTERY COMPENSATION */
+    //Motor.outputPWM1 += Motor.outputPWM1 * (12.6f - Sensor.Battery.batteryVoltage) / 1.5 / 10; //11.1V 인 경우 현재 출력에서 10% 추가
+    //
+    //
+    /*
+    Motor.outputPWM1 += Motor.outputPWM1 * (12.6f - Sensor.Battery.batteryVoltage) / 1.5 / 10;
+    Motor.outputPWM2 += Motor.outputPWM2 * (12.6f - Sensor.Battery.batteryVoltage) / 1.5 / 10;
+    Motor.outputPWM3 += Motor.outputPWM3 * (12.6f - Sensor.Battery.batteryVoltage) / 1.5 / 10;
+    Motor.outputPWM4 += Motor.outputPWM4 * (12.6f - Sensor.Battery.batteryVoltage) / 1.5 / 10;
+    */
   }
   
   if((Flags.flightMode == 3) && (Sensor.Receiver.channel3 <= 1088))
